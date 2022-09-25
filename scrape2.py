@@ -5,22 +5,8 @@ import re
 import webbrowser as web
 
 #   ----------    get user_agent key:value for headers
-httpbin_org_get = {
-  "args": {}, 
-  "headers": {
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9", 
-    "Accept-Encoding": "gzip, deflate", 
-    "Accept-Language": "en-US,en;q=0.9", 
-    "Host": "httpbin.org", 
-    "Upgrade-Insecure-Requests": "1", 
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.5112.102 Safari/537.36 Edg/104.0.1293.70", 
-    "X-Amzn-Trace-Id": "Root=1-63123996-5eb3a78b2af3fb232bfe56f5"
-  }, 
-  "origin": "92.11.13.89", 
-  "url": "http://httpbin.org/get"
-}
 headers1 = {
-    "User-Agent": httpbin_org_get["headers"]["User-Agent"]
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.5112.102 Safari/537.36 Edg/104.0.1293.70"
 }
 
 #   ----------    determine search item keyword
