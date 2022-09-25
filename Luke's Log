@@ -19,7 +19,7 @@ I forked using the website, and cloned using my terminal
     >  git clone https://github.com/LucasFishwicas/MyFirstRepo
 
 Repeated process of creating Luke's Log.
-Attempting to push
+Attempted to push
     > git push
     Username for 'https://github.com': LucasFishwicas
     Password for 'https://LucasFishwicas@github.com':
@@ -40,3 +40,14 @@ Followed the link and it confirmed, reading:
     to the API over Basic Authentication. "
 
 Created Token
+
+Push Successful
+But I think I should have created a Pull Request instead of Cloning
+
+Attempted Pull Request
+It appears that the Pull Request is Requesting Sam to Merge my forked changes to his main branch
+
+Merged
+
+Updated Log
+    >  git commit -m "Updated Log after Merge"
