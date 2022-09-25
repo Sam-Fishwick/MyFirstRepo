@@ -1,3 +1,3 @@
 # MyFirstRepo
 
-Just coz I wanted to
+My first git repository
