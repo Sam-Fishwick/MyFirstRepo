@@ -109,7 +109,7 @@ for page in range(1, pages + 1):
     #    ----------    sort dictionary into list of key:value tuples in ascending price
     sorted_dict = sorted(lildict.items(), key=lambda x: x[1]['price float'])
     #    ----------    create pandas dataframe from lildict data
-    dict_df = pd.DataFrame(lildict)
+    dict_df = pd.DataFrame(lildict) #  --  dictionary may be wrong format e.g., {'col1':[0,1,2,3], 'col2':[a,b,c,d]}
 
     #    ----------    declare function to append results to file
     def write_dict(input):
