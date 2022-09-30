@@ -3,6 +3,8 @@ from bs4 import BeautifulSoup
 import requests
 import re
 import webbrowser as web
+import pandas as pd
+import pyodbc as db
 
 #   ----------    get user_agent key:value for headers
 headers1 = {
