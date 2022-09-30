@@ -24,6 +24,13 @@ pages_text = soup.find(attrs={'class':'s-pagination-item s-pagination-disabled'}
 pages = int(pages_text)
 
 #   ----------    execute code for each page of website
+#for page in range(1, pages + 1):
+#   get_soup()
+#   page_num()
+#   pull_divs()
+#   try_except()
+#   etc.
+
 for page in range(1, pages + 1):
     #   ----------    get url html and convert to BS object
     url = f'https://www.amazon.co.uk/s?k={search_item}&page={page}'
@@ -41,14 +48,14 @@ for page in range(1, pages + 1):
     try:
         rslt_span = soup.find('span', attrs={'data-component-type':'s-search-results'})
         rslt_span_msg = 'successful'
-    except:
+    except AttributeError:
         rslt_span_msg = 'failed'
 
     #    ----------    pull list of all result tags
     try:
         rslt_lildivs = rslt_span.findAll('div', attrs={'class':'sg-col-4-of-12 s-result-item s-asin sg-col-4-of-16 AdHolder sg-col s-widget-spacing-small sg-col-4-of-20'})
         rslt_lildivs_msg = 'successful'
-    except:
+    except AttributeError:
         rslt_lildivs_msg = 'failed'
 
     #    ----------    open file for each page, clears contents if already exists
@@ -64,36 +71,36 @@ for page in range(1, pages + 1):
         #    ----------    try/except clauses in case of missing information
         try:
             rslt_rating = lildiv.find('span', attrs={'class':'a-icon-alt'}).text
-        except:
+        except AttributeError:
             rslt_rating = 'N/A'
 
         try:
             rslt_reviews = lildiv.find('span', attrs={'class':'a-size-base s-underline-text'}).text 
-        except:
+        except AttributeError:
             rslt_reviews = 'N/A'
 
         try:
             rslt_desc = lildiv.find('span', attrs={'class': re.compile('a-size-base.* a-color-base a-text-normal')}).text
-        except:
+        except AttributeError:
             rslt_desc = 'N/A'
 
         try:
             rslt_price = lildiv.find('span', attrs={'a-offscreen'}).text
             rslt_price_float = float(rslt_price[1:])
-        except:
+        except AttributeError:
             rslt_price = 'N/A'    
             rslt_price_float = 0.00
 
         try:
             rslt_href = lildiv.find('a', attrs={'class':'a-link-normal s-underline-text s-underline-link-text s-link-style a-text-normal'}).get('href')
             rslt_link = 'https://www.amazon.co.uk'+rslt_href
-        except:
+        except AttributeError:
             rslt_href = 'N/A'
             rslt_link = 'N/A'
 
         try:
             rslt_brand = lildiv.find('span', attrs={'class':'a-size-base-plus a-color-base'}).text
-        except:
+        except AttributeError:
             rslt_brand = 'N/A'
 
         #    ----------    insert pulled data into pre-declared dictionary
@@ -101,7 +108,8 @@ for page in range(1, pages + 1):
 
     #    ----------    sort dictionary into list of key:value tuples in ascending price
     sorted_dict = sorted(lildict.items(), key=lambda x: x[1]['price float'])
-
+    #    ----------    create pandas dataframe from lildict data
+    dict_df = pd.DataFrame(lildict)
 
     #    ----------    declare function to append results to file
     def write_dict(input):
@@ -121,6 +129,19 @@ for page in range(1, pages + 1):
   
     #    ----------    print page number and number of items
     print(f'Page: {page}/{pages} contains {len(sorted_dict)} items')
+
+    #    ----------    instantiate pyodbc connection and cursor objects
+    # cnxn = db.connect('Driver={SQL Server};'
+    #                       'Server=DESKTOP-73Q4UES\SQLEXPRESS;'
+    #                       'Database=gobbledigook;'
+    #                       'Trusted_Connecton=yes;')
+    # crsr = cnxn.crsr()
+
+    #    ----------    SQL insert query for pyodbc database
+    # insert_query = '''INSERT INTO scrapes (search_item, page_num, brand, description, price, rating, reviews_num)
+    #                   VALUES (?,?,?,?,?,?,?)'''
+    # values = (search_item, page, brand, description, price, rating, reviews)
+    # crsr.execute(insert_query, values)
 
 #    ----------    state when program is done
 print('Scrape complete')
