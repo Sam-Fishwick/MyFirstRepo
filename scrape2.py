@@ -1,4 +1,4 @@
-#   ----    import libraries
+#   ----    import libraries/modules
 from bs4 import BeautifulSoup
 import requests
 import re
@@ -13,11 +13,13 @@ cnxn = db.connect('Driver={SQL Server};'
                   'Trusted_Connecton=yes;')
 crsr = cnxn.cursor()
 
+#    ----    pull table names in database and convert to list of strings
 tables = crsr.tables()
 str_tables = []
 for table in tables:
     str_tables.append((str(table.table_name)))
 
+#    ----    create scrapes table if not already present in database
 if 'scrapes' not in str_tables:
     create_query = '''CREATE TABLE scrapes (
                   search_item varchar(100),
@@ -40,7 +42,7 @@ headers1 = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit
 search_item = input('What product do you want to search for on Amazon?\n').replace(" ","+")
 
 #   ----    define url
-url = f'https://www.amazon.co.uk/s?k={search_item}' 
+url = f'https://www.amazon.co.uk/s?k={search_item}'
 
 def get_soup(url_input):
     '''get url html and convert to BS object'''
@@ -48,25 +50,28 @@ def get_soup(url_input):
     soup = BeautifulSoup(url_get.content, 'lxml')
     return soup
 
-def get_tag(soup_input, attr):
-    '''pull tag with given attribute from given BS object'''
-    tag = soup_input.find(attr)
-    return tag
-
-def write_dict(input):
+def write_dict(input, file_input):
     '''declare function to append results to file'''
-    f1.write(f"Brand: {input[1]['brand']},\n")
-    f1.write(f"Description: {input[1]['description']},\n")
-    f1.write(f"Price: {input[1]['price']},\n")
-    f1.write(f"Rating: {input[1]['rating']} from {input[1]['reviews']} reviews,\n")
-    f1.write(f"Link: {input[1]['link']}\n")
-    f1.write("-------------------------------\n\n")
+    file_input.write(f"Brand: {input[1]['brand']},\n")
+    file_input.write(f"Description: {input[1]['description']},\n")
+    file_input.write(f"Price: {input[1]['price']},\n")
+    file_input.write(f"Rating: {input[1]['rating']} from {input[1]['reviews']} reviews,\n")
+    file_input.write(f"Link: {input[1]['link']}\n")
+    file_input.write("-------------------------------\n\n")
     print('written to file')
 
-def db_write(input):
-    insert_query = '''INSERT INTO scrapes (search_item, page_num, brand, description, price, rating, reviews_num)
-                   VALUES (?,?,?,?,?,?,?)'''
-    values = (search_item, page, input[1]['brand'], input[1]['description'], input[1]['price'], input[1]['rating'], input[1]['reviews'])
+def db_write(input, page_input):
+    insert_query = '''
+        INSERT INTO scrapes (search_item, page_num, brand, description, price, rating, reviews_num)
+        VALUES (?,?,?,?,?,?,?)'''
+    values = (
+        search_item, 
+        page_input, 
+        input[1]['brand'], 
+        input[1]['description'], 
+        input[1]['price'], 
+        input[1]['rating'], 
+        input[1]['reviews'])
     crsr.execute(insert_query, values)
     print('inserted to scrapes table')
 
@@ -76,13 +81,14 @@ pages_text = main_soup.find(attrs={'class':'s-pagination-item s-pagination-disab
 pages = int(pages_text)
 
 #   ----    execute code for each page of website
-for page in range(1, pages + 1):
+def inside_for(page_input, pages_input):
+    page_url = f'{url}&page={page_input}'
     #    ----    get url html and convert to BS object
-    page_soup = get_soup(f'{url}&page={page}')
+    page_soup = get_soup(page_url)
     #    ----    open weblink
-    web.open(f'{url}&page={page}')
+    web.open(page_url)
     #    ----    pull current page number
-    page_num = get_tag(page_soup, "attrs={'class':'s-pagination-item s-pagination-selected'}.text")
+    # page_num = page_soup.find(attrs={'class':'s-pagination-item s-pagination-selected'}).text
     #    ----    pull span tag containing all results 
     try:
         rslt_span = page_soup.find('span', attrs={'data-component-type':'s-search-results'})
@@ -97,7 +103,7 @@ for page in range(1, pages + 1):
         rslt_lildivs_msg = 'failed'
 
     #    ----    open file for each page, clears contents if already exists
-    with open(f'Amazon_{search_item}_page{page}.txt', 'w') as file:
+    with open(f'Amazon_{search_item}_page{page_input}.txt', 'w') as file:
         file.write(f"span request: {rslt_span_msg},\n")
         file.write(f"lildivs request: {rslt_lildivs_msg},\n\n")
 
@@ -162,15 +168,17 @@ for page in range(1, pages + 1):
 
     #    ----    iterate through sorted list of tuples
     for rslt in sorted_dict:
-        with open(f'Amazon_{search_item}_page{page}.txt', 'a', encoding='utf-8') as f1:
+        with open(f'Amazon_{search_item}_page{page_input}.txt', 'a', encoding='utf-8') as f1:
             #    ----    call function to append results to file
-            write_dict(rslt)
-        db_write(rslt)
+            write_dict(rslt, f1)
+        db_write(rslt, page_input)
         cnxn.commit()
   
     #    ----    print page number and number of items
-    print(f'Page: {page}/{pages} contains {len(sorted_dict)} items')
+    print(f'Page: {page_input}/{pages_input} contains {len(sorted_dict)} items')
 
+for page in range(1, pages + 1):
+    inside_for(page, pages)
 
 # delete_table_query = '''DROP TABLE new_table'''
 # crsr.execute(delete_table_query)
