@@ -6,21 +6,21 @@ import webbrowser as web
 import pandas as pd
 import pyodbc as db
 
-#    ----    instantiate pyodbc connection and cursor objects
+#    ----    instantiate pyodbc database connection and cursor objects
 cnxn = db.connect('Driver={SQL Server};'
                   'Server=DESKTOP-73Q4UES\SQLEXPRESS;'
                   'Database=gobbledigook;'
                   'Trusted_Connecton=yes;')
 crsr = cnxn.cursor()
 
-#    ----    pull table names in database and convert to list of strings
+#    ----    pull names of table in database and convert to list of strings
 tables = crsr.tables()
-str_tables = []
+table_names = []
 for table in tables:
-    str_tables.append((str(table.table_name)))
+    table_names.append((str(table.table_name)))
 
-#    ----    create scrapes table if not already present in database
-if 'scrapes' not in str_tables:
+#    ----    create 'scrapes' table if not already present in database
+if 'scrapes' not in table_names:
     create_query = '''CREATE TABLE scrapes (
                   search_item varchar(100),
                   page_num int,
@@ -50,8 +50,13 @@ def get_soup(url_input):
     soup = BeautifulSoup(url_get.content, 'lxml')
     return soup
 
-def write_dict(input, file_input):
-    '''declare function to append results to file'''
+# def get_tag(soup_input, attr_name, attr_desc):
+#     '''pull relevant tag from given soup object and attribute'''
+#     tag = soup_input.find(attrs={attr_name:attr_desc}).text
+#     return tag
+
+def txt_write(input, file_input):
+    '''append results to .txt file'''
     file_input.write(f"Brand: {input[1]['brand']},\n")
     file_input.write(f"Description: {input[1]['description']},\n")
     file_input.write(f"Price: {input[1]['price']},\n")
@@ -60,7 +65,7 @@ def write_dict(input, file_input):
     file_input.write("-------------------------------\n\n")
     print('written to file')
 
-def db_write(input, page_input):
+def db_insert(input, page_input):
     insert_query = '''
         INSERT INTO scrapes (search_item, page_num, brand, description, price, rating, reviews_num)
         VALUES (?,?,?,?,?,?,?)'''
@@ -73,28 +78,35 @@ def db_write(input, page_input):
         input[1]['rating'], 
         input[1]['reviews'])
     crsr.execute(insert_query, values)
-    print('inserted to scrapes table')
+    print(f'{crsr.rowcount} row(s) inserted to scrapes table')
+    cnxn.commit()
 
 #   ----    pull total number of pages
 main_soup = get_soup(url)
 pages_text = main_soup.find(attrs={'class':'s-pagination-item s-pagination-disabled'}).text
 pages = int(pages_text)
 
-#   ----    execute code for each page of website
+#   ----    declare function to be called for each page of website
 def inside_for(page_input, pages_input):
+    #    ----    define url for each page
     page_url = f'{url}&page={page_input}'
+
     #    ----    get url html and convert to BS object
     page_soup = get_soup(page_url)
+
     #    ----    open weblink
     web.open(page_url)
+
     #    ----    pull current page number
     # page_num = page_soup.find(attrs={'class':'s-pagination-item s-pagination-selected'}).text
+
     #    ----    pull span tag containing all results 
     try:
         rslt_span = page_soup.find('span', attrs={'data-component-type':'s-search-results'})
         rslt_span_msg = 'successful'
     except AttributeError:
         rslt_span_msg = 'failed'
+
     #    ----    pull list of all result tags
     try:
         rslt_lildivs = rslt_span.findAll('div', attrs={'class':'sg-col-4-of-12 s-result-item s-asin sg-col-4-of-16 AdHolder sg-col s-widget-spacing-small sg-col-4-of-20'})
@@ -107,12 +119,9 @@ def inside_for(page_input, pages_input):
         file.write(f"span request: {rslt_span_msg},\n")
         file.write(f"lildivs request: {rslt_lildivs_msg},\n\n")
 
-    #    ----    pre-declare dictionary
-    lildict = {}
-
-    # #    ----    iterate through list of result tags and pull information
+    #    ----    iterate through items and pull data
     for index, lildiv in enumerate(rslt_lildivs):
-        #    ----    try/except clauses in case of missing information
+        #    ----    try/except clauses in case of missing information (AttributeError: 'None' has no .text attribute)
         try:
             rslt_rating = lildiv.find('span', attrs={'class':'a-icon-alt'}).text
         except AttributeError:
@@ -148,6 +157,7 @@ def inside_for(page_input, pages_input):
             rslt_brand = 'N/A'
 
         #    ----    insert pulled data into pre-declared dictionary
+        lildict = {}
         lildict[index+1] = {
             'rating':rslt_rating,
             'reviews':rslt_reviews, 
@@ -170,20 +180,23 @@ def inside_for(page_input, pages_input):
     for rslt in sorted_dict:
         with open(f'Amazon_{search_item}_page{page_input}.txt', 'a', encoding='utf-8') as f1:
             #    ----    call function to append results to file
-            write_dict(rslt, f1)
-        db_write(rslt, page_input)
-        cnxn.commit()
-  
+            txt_write(rslt, f1)
+        db_insert(rslt, page_input)
+
     #    ----    print page number and number of items
     print(f'Page: {page_input}/{pages_input} contains {len(sorted_dict)} items')
 
+#    ----    iterate through each page, pull data, and record in .txt file and database
 for page in range(1, pages + 1):
     inside_for(page, pages)
 
-# delete_table_query = '''DROP TABLE new_table'''
-# crsr.execute(delete_table_query)
-# cnxn.commit()
+# def db_delete(table_name, condition):
+#     delete_table_query = '''DELETE FROM table_name WHERE condition'''
+#     crsr.execute(delete_table_query)
+#     print(f'{crsr.rowcount} row(s) were deleted')
+#     cnxn.commit()
 
+#    ----    close pyodbc cursor and connection
 crsr.close()
 cnxn.close()
 
