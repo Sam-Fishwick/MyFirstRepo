@@ -1,25 +1,24 @@
-#   ----    import libraries/modules
+# --- import libraries/modules
 from bs4 import BeautifulSoup
 import requests
 import re
 import webbrowser as web
-import pandas as pd
 import pyodbc as db
 
-#    ----    instantiate pyodbc database connection and cursor objects
+# --- instantiate pyodbc database connection and cursor objects
 cnxn = db.connect('Driver={SQL Server};'
                   'Server=DESKTOP-73Q4UES\SQLEXPRESS;'
                   'Database=gobbledigook;'
                   'Trusted_Connecton=yes;')
 crsr = cnxn.cursor()
 
-#    ----    pull names of table in database and convert to list of strings
+# --- pull names of table in database and convert to list of strings
 tables = crsr.tables()
 table_names = []
 for table in tables:
     table_names.append((str(table.table_name)))
 
-#    ----    create 'scrapes' table if not already present in database
+# --- create 'scrapes' table if not already present in database
 if 'scrapes' not in table_names:
     create_query = '''CREATE TABLE scrapes (
                   search_item varchar(100),
@@ -35,26 +34,29 @@ if 'scrapes' not in table_names:
 else:
     print('scrapes table already exists')
 
-#   ----    get user_agent key:value for headers
+# --- get user_agent key:value for headers
 headers1 = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.5112.102 Safari/537.36 Edg/104.0.1293.70"}
 
-#   ----    determine search item keyword
+# --- determine search item keyword
 search_item = input('What product do you want to search for on Amazon?\n').replace(" ","+")
 
-#   ----    define url
+# --- define url
 url = f'https://www.amazon.co.uk/s?k={search_item}'
 
+# --- define function to instantiate soup object from url
 def get_soup(url_input):
     '''get url html and convert to BS object'''
     url_get = requests.get(url_input, headers = headers1)
     soup = BeautifulSoup(url_get.content, 'lxml')
     return soup
 
+# --- define function to pull text from a particular tag with given attribute
 # def get_tag(soup_input, attr_name, attr_desc):
 #     '''pull relevant tag from given soup object and attribute'''
 #     tag = soup_input.find(attrs={attr_name:attr_desc}).text
 #     return tag
 
+# --- define function to write data from given data-structure to a given .txt file
 def txt_write(input, file_input):
     '''append results to .txt file'''
     file_input.write(f"Brand: {input[1]['brand']},\n")
@@ -65,6 +67,7 @@ def txt_write(input, file_input):
     file_input.write("-------------------------------\n\n")
     print('written to file')
 
+# --- define function to insert data from given data-structure to pyodbc database
 def db_insert(input, page_input):
     insert_query = '''
         INSERT INTO scrapes (search_item, page_num, brand, description, price, rating, reviews_num)
@@ -81,47 +84,54 @@ def db_insert(input, page_input):
     print(f'{crsr.rowcount} row(s) inserted to scrapes table')
     cnxn.commit()
 
-#   ----    pull total number of pages
+# --- define function to delete table from database
+# def db_delete(table_name, condition):
+#     delete_table_query = '''DELETE FROM table_name WHERE condition'''
+#     crsr.execute(delete_table_query)
+#     print(f'{crsr.rowcount} row(s) were deleted')
+#     cnxn.commit()
+
+# --- pull total number of pages from given url
 main_soup = get_soup(url)
 pages_text = main_soup.find(attrs={'class':'s-pagination-item s-pagination-disabled'}).text
 pages = int(pages_text)
 
-#   ----    declare function to be called for each page of website
+# --- declare function to be called for each page of website
 def inside_for(page_input, pages_input):
-    #    ----    define url for each page
+    # --- define url for each page
     page_url = f'{url}&page={page_input}'
 
-    #    ----    get url html and convert to BS object
+    # --- get url html and convert to BS object
     page_soup = get_soup(page_url)
 
-    #    ----    open weblink
-    web.open(page_url)
+    # --- open weblink
+    # web.open(page_url)
 
-    #    ----    pull current page number
+    # --- pull current page number
     # page_num = page_soup.find(attrs={'class':'s-pagination-item s-pagination-selected'}).text
 
-    #    ----    pull span tag containing all results 
+    # --- pull span tag containing all results 
     try:
         rslt_span = page_soup.find('span', attrs={'data-component-type':'s-search-results'})
         rslt_span_msg = 'successful'
     except AttributeError:
         rslt_span_msg = 'failed'
 
-    #    ----    pull list of all result tags
+    # --- pull list of all result tags
     try:
         rslt_lildivs = rslt_span.findAll('div', attrs={'class':'sg-col-4-of-12 s-result-item s-asin sg-col-4-of-16 AdHolder sg-col s-widget-spacing-small sg-col-4-of-20'})
         rslt_lildivs_msg = 'successful'
     except AttributeError:
         rslt_lildivs_msg = 'failed'
 
-    #    ----    open file for each page, clears contents if already exists
+    # --- open file for each page, clears contents if already exists
     with open(f'Amazon_{search_item}_page{page_input}.txt', 'w') as file:
         file.write(f"span request: {rslt_span_msg},\n")
         file.write(f"lildivs request: {rslt_lildivs_msg},\n\n")
 
-    #    ----    iterate through items and pull data
+    # --- iterate through items and pull data
     for index, lildiv in enumerate(rslt_lildivs):
-        #    ----    try/except clauses in case of missing information (AttributeError: 'None' has no .text attribute)
+        # --- try/except clauses in case of missing information (AttributeError: 'None' has no .text attribute)
         try:
             rslt_rating = lildiv.find('span', attrs={'class':'a-icon-alt'}).text
         except AttributeError:
@@ -156,7 +166,7 @@ def inside_for(page_input, pages_input):
         except AttributeError:
             rslt_brand = 'N/A'
 
-        #    ----    insert pulled data into pre-declared dictionary
+        # --- insert pulled data into pre-declared dictionary
         lildict = {}
         lildict[index+1] = {
             'rating':rslt_rating,
@@ -167,38 +177,26 @@ def inside_for(page_input, pages_input):
             'price float': rslt_price_float,
             'link':rslt_link}
 
-    #    ----    sort dictionary into list of key:value tuples in ascending price
+    # --- sort dictionary into list of key:value tuples in ascending price
     sorted_dict = sorted(lildict.items(), key=lambda x: x[1]['price float'])
 
-    #    ----    create pandas dataframe from sorted_dict data
-    # new_dict = {}
-    # for tuple in sorted_dict:    #  --  convert dictionary to correct format e.g., {'col1':[0,1,2,3], 'col2':[a,b,c,d]}
-    #     new_dict[key].append(value) for key, value in tuple.items():
-    # dict_df = pd.DataFrame(new_dict)
-
-    #    ----    iterate through sorted list of tuples
+    # --- iterate through sorted list of tuples
     for rslt in sorted_dict:
         with open(f'Amazon_{search_item}_page{page_input}.txt', 'a', encoding='utf-8') as f1:
-            #    ----    call function to append results to file
+            # --- call function to append results to file
             txt_write(rslt, f1)
         db_insert(rslt, page_input)
 
-    #    ----    print page number and number of items
+    # --- print page number and number of items
     print(f'Page: {page_input}/{pages_input} contains {len(sorted_dict)} items')
 
-#    ----    iterate through each page, pull data, and record in .txt file and database
+# --- iterate through each page, pull data, and record in .txt file and database
 for page in range(1, pages + 1):
     inside_for(page, pages)
 
-# def db_delete(table_name, condition):
-#     delete_table_query = '''DELETE FROM table_name WHERE condition'''
-#     crsr.execute(delete_table_query)
-#     print(f'{crsr.rowcount} row(s) were deleted')
-#     cnxn.commit()
-
-#    ----    close pyodbc cursor and connection
+# --- close pyodbc cursor and connection
 crsr.close()
 cnxn.close()
 
-#    ----    state when program is done
+# --- state when program is done
 print('Scrape complete')
