@@ -1,8 +1,6 @@
-# MyFirstRepo
+# WebScraping
 
-This is a personal respository to house my personal projects.
-
-Currently this repository contains a python web-scraping program intended to gather price data from Amazon.co.uk via its HTML.
+This is a personal respository to house my personal python web-scraping project intended to gather Amazon.co.uk price data, as well as store the data in a MS SQL Server database and manipulate the data with Pandas in a Jupyter Notebook.
 
 This project is intended to demonstrate data-gathering capabilities in python as well as eventually providing a small data-set with which to demonstrate SQL querying, and python data-cleaning, data-manipulation, and data-visualisation capabilities (pandas, numpy, matplotlib, etc.).
 
