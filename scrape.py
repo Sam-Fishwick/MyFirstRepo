@@ -1,14 +1,18 @@
 # --- import libraries/modules
+import os
+from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 import requests
 import re
 import webbrowser as web
 import pyodbc as db
 
+load_dotenv()
+
 # --- instantiate pyodbc database connection and cursor objects
-cnxn = db.connect('Driver={SQL Server};'
-                  'Server=DESKTOP-73Q4UES\SQLEXPRESS;'
-                  'Database=gobbledigook;'
+cnxn = db.connect(f'Driver={os.getenv("DRIVER")};'
+                  'Server={os.getenv("SERVER")};'
+                  'Database={os.getenv("DATABASE")};'
                   'Trusted_Connecton=yes;')
 crsr = cnxn.cursor()
 
@@ -35,8 +39,7 @@ else:
     print('scrapes table already exists')
 
 # --- get user_agent key:value for headers
-headers1 = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.5112.102 Safari/537.36 Edg/104.0.1293.70"}
-
+headers1 = os.getenv('HEADER')
 # --- determine search item keyword
 search_item = input('What product do you want to search for on Amazon?\n').replace(" ","+")
 
