@@ -1,5 +1,7 @@
 # WebScraping
 
+## DEPRECATED
+
 This is a personal respository to house my personal python web-scraping project
 intended to gather Amazon.co.uk price data, as well as store the data in a MS
 SQL Server database and manipulate the data with Pandas in a Jupyter Notebook.
