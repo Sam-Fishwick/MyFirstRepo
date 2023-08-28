@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from bs4 import BeautifulSoup
 import requests
 import re
-import webbrowser as web
+# import webbrowser as web
 import pyodbc as db
 
 load_dotenv()
@@ -41,15 +41,18 @@ else:
 # --- get user_agent key:value for headers
 headers1 = os.getenv('HEADER')
 # --- determine search item keyword
-search_item = input('What product do you want to search for on Amazon?\n').replace(" ","+")
+search_item = input(
+        'What product do you want to search for on Amazon?\n'
+                    ).replace(" ", "+")
 
 # --- define url
 url = f'https://www.amazon.co.uk/s?k={search_item}'
 
+
 # --- define function to instantiate soup object from url
 def get_soup(url_input):
     '''get url html and convert to BS object'''
-    url_get = requests.get(url_input, headers = headers1)
+    url_get = requests.get(url_input, headers=headers1)
     soup = BeautifulSoup(url_get.content, 'lxml')
     return soup
 
@@ -59,7 +62,10 @@ def get_soup(url_input):
 #     tag = soup_input.find(attrs={attr_name:attr_desc}).text
 #     return tag
 
-# --- define function to write data from given data-structure to a given .txt file
+# --- define function to write data from given data-structure to a given .txt
+# --- file
+
+
 def txt_write(input, file_input):
     '''append results to .txt file'''
     file_input.write(f"Brand: {input[1]['brand']},\n")
@@ -70,18 +76,26 @@ def txt_write(input, file_input):
     file_input.write("-------------------------------\n\n")
     print('written to file')
 
-# --- define function to insert data from given data-structure to pyodbc database
+# --- define function to insert data from given data-structure to pyodbc
+# --- database
 def db_insert(input, page_input):
     insert_query = '''
-        INSERT INTO scrapes (search_item, page_num, brand, description, price, rating, reviews_num)
+        INSERT INTO scrapes (
+                search_item,
+                page_num,
+                brand,
+                description,
+                price,
+                rating,
+                reviews_num)
         VALUES (?,?,?,?,?,?,?)'''
     values = (
-        search_item, 
-        page_input, 
-        input[1]['brand'], 
-        input[1]['description'], 
-        input[1]['price'], 
-        input[1]['rating'], 
+        search_item,
+        page_input,
+        input[1]['brand'],
+        input[1]['description'],
+        input[1]['price'],
+        input[1]['rating'],
         input[1]['reviews'])
     crsr.execute(insert_query, values)
     print(f'{crsr.rowcount} row(s) inserted to scrapes table')
@@ -94,9 +108,11 @@ def db_insert(input, page_input):
 #     print(f'{crsr.rowcount} row(s) were deleted')
 #     cnxn.commit()
 
+
 # --- pull total number of pages from given url
 main_soup = get_soup(url)
-pages_text = main_soup.find(attrs={'class':'s-pagination-item s-pagination-disabled'}).text
+pages_text = main_soup.find(
+        attrs={'class': 's-pagination-item s-pagination-disabled'}).text
 pages = int(pages_text)
 
 # --- declare function to be called for each page of website
@@ -111,18 +127,22 @@ def inside_for(page_input, pages_input):
     # web.open(page_url)
 
     # --- pull current page number
-    # page_num = page_soup.find(attrs={'class':'s-pagination-item s-pagination-selected'}).text
+    # page_num = page_soup.find(
+    #        attrs={'class':'s-pagination-item s-pagination-selected'}).text
 
-    # --- pull span tag containing all results 
+    # --- pull span tag containing all results
     try:
-        rslt_span = page_soup.find('span', attrs={'data-component-type':'s-search-results'})
+        rslt_span = page_soup.find('span',
+                                   attrs={
+                                       'data-component-type': 's-search-results'
+                                       })
         rslt_span_msg = 'successful'
     except AttributeError:
         rslt_span_msg = 'failed'
 
     # --- pull list of all result tags
     try:
-        rslt_lildivs = rslt_span.findAll('div', attrs={'class':'sg-col-4-of-12 s-result-item s-asin sg-col-4-of-16 AdHolder sg-col s-widget-spacing-small sg-col-4-of-20'})
+        rslt_lildivs = rslt_span.findAll('div', attrs={'class': 'sg-col-4-of-12 s-result-item s-asin sg-col-4-of-16 AdHolder sg-col s-widget-spacing-small sg-col-4-of-20'})
         rslt_lildivs_msg = 'successful'
     except AttributeError:
         rslt_lildivs_msg = 'failed'
@@ -136,12 +156,12 @@ def inside_for(page_input, pages_input):
     for index, lildiv in enumerate(rslt_lildivs):
         # --- try/except clauses in case of missing information (AttributeError: 'None' has no .text attribute)
         try:
-            rslt_rating = lildiv.find('span', attrs={'class':'a-icon-alt'}).text
+            rslt_rating = lildiv.find('span', attrs={'class': 'a-icon-alt'}).text
         except AttributeError:
             rslt_rating = 'N/A'
 
         try:
-            rslt_reviews = lildiv.find('span', attrs={'class':'a-size-base s-underline-text'}).text 
+            rslt_reviews = lildiv.find('span', attrs={'class': 'a-size-base s-underline-text'}).text
         except AttributeError:
             rslt_reviews = 'N/A'
 
@@ -158,27 +178,27 @@ def inside_for(page_input, pages_input):
             rslt_price_float = 0.00
 
         try:
-            rslt_href = lildiv.find('a', attrs={'class':'a-link-normal s-underline-text s-underline-link-text s-link-style a-text-normal'}).get('href')
+            rslt_href = lildiv.find('a', attrs={'class': 'a-link-normal s-underline-text s-underline-link-text s-link-style a-text-normal'}).get('href')
             rslt_link = 'https://www.amazon.co.uk'+rslt_href
         except AttributeError:
             rslt_href = 'N/A'
             rslt_link = 'N/A'
 
         try:
-            rslt_brand = lildiv.find('span', attrs={'class':'a-size-base-plus a-color-base'}).text
+            rslt_brand = lildiv.find('span', attrs={'class': 'a-size-base-plus a-color-base'}).text
         except AttributeError:
             rslt_brand = 'N/A'
 
         # --- insert pulled data into pre-declared dictionary
         lildict = {}
         lildict[index+1] = {
-            'rating':rslt_rating,
-            'reviews':rslt_reviews, 
-            'brand':rslt_brand,
-            'description':rslt_desc,
-            'price':rslt_price,
+            'rating': rslt_rating,
+            'reviews': rslt_reviews,
+            'brand': rslt_brand,
+            'description': rslt_desc,
+            'price': rslt_price,
             'price float': rslt_price_float,
-            'link':rslt_link}
+            'link': rslt_link}
 
     # --- sort dictionary into list of key:value tuples in ascending price
     sorted_dict = sorted(lildict.items(), key=lambda x: x[1]['price float'])
@@ -192,6 +212,7 @@ def inside_for(page_input, pages_input):
 
     # --- print page number and number of items
     print(f'Page: {page_input}/{pages_input} contains {len(sorted_dict)} items')
+
 
 # --- iterate through each page, pull data, and record in .txt file and database
 for page in range(1, pages + 1):
