@@ -71,10 +71,12 @@ def txt_write(input, file_input):
     file_input.write(f"Brand: {input[1]['brand']},\n")
     file_input.write(f"Description: {input[1]['description']},\n")
     file_input.write(f"Price: {input[1]['price']},\n")
-    file_input.write(f"Rating: {input[1]['rating']} from {input[1]['reviews']} reviews,\n")
+    file_input.write(f"Rating: {input[1]['rating']} from"
+                     f"{input[1]['reviews']} reviews,\n")
     file_input.write(f"Link: {input[1]['link']}\n")
     file_input.write("-------------------------------\n\n")
     print('written to file')
+
 
 # --- define function to insert data from given data-structure to pyodbc
 # --- database
@@ -132,17 +134,20 @@ def inside_for(page_input, pages_input):
 
     # --- pull span tag containing all results
     try:
-        rslt_span = page_soup.find('span',
-                                   attrs={
-                                       'data-component-type': 's-search-results'
-                                       })
+        rslt_span = page_soup.find(
+                'span',
+                attrs={'data-component-type': 's-search-results'})
         rslt_span_msg = 'successful'
     except AttributeError:
         rslt_span_msg = 'failed'
 
     # --- pull list of all result tags
     try:
-        rslt_lildivs = rslt_span.findAll('div', attrs={'class': 'sg-col-4-of-12 s-result-item s-asin sg-col-4-of-16 AdHolder sg-col s-widget-spacing-small sg-col-4-of-20'})
+        rslt_lildivs = rslt_span.findAll(
+                'div', attrs={'class': ('sg-col-4-of-12 s-result-item s-asin'
+                                        'sg-col-4-of-16 AdHolder sg-col'
+                                        's-widget-spacing-small'
+                                        'sg-col-4-of-20')})
         rslt_lildivs_msg = 'successful'
     except AttributeError:
         rslt_lildivs_msg = 'failed'
@@ -154,19 +159,28 @@ def inside_for(page_input, pages_input):
 
     # --- iterate through items and pull data
     for index, lildiv in enumerate(rslt_lildivs):
-        # --- try/except clauses in case of missing information (AttributeError: 'None' has no .text attribute)
+        # --- try/except clauses in case of missing information
+        # --- (AttributeError: 'None' has no .text attribute)
         try:
-            rslt_rating = lildiv.find('span', attrs={'class': 'a-icon-alt'}).text
+            rslt_rating = lildiv.find('span', attrs={'class':
+                                                     'a-icon-alt'}).text
         except AttributeError:
             rslt_rating = 'N/A'
 
         try:
-            rslt_reviews = lildiv.find('span', attrs={'class': 'a-size-base s-underline-text'}).text
+            rslt_reviews = lildiv.find('span',
+                                       attrs={'class':
+                                              ('a-size-base'
+                                               's-underline-text')}).text
         except AttributeError:
             rslt_reviews = 'N/A'
 
         try:
-            rslt_desc = lildiv.find('span', attrs={'class': re.compile('a-size-base.* a-color-base a-text-normal')}).text
+            rslt_desc = lildiv.find('span',
+                                    attrs={'class':
+                                           re.compile('a-size-base.*'
+                                                      'a-color-base'
+                                                      'a-text-normal')}).text
         except AttributeError:
             rslt_desc = 'N/A'
 
@@ -174,18 +188,24 @@ def inside_for(page_input, pages_input):
             rslt_price = lildiv.find('span', attrs={'a-offscreen'}).text
             rslt_price_float = float(rslt_price[1:])
         except AttributeError:
-            rslt_price = 'N/A'    
+            rslt_price = 'N/A'
             rslt_price_float = 0.00
 
         try:
-            rslt_href = lildiv.find('a', attrs={'class': 'a-link-normal s-underline-text s-underline-link-text s-link-style a-text-normal'}).get('href')
+            rslt_href = lildiv.find('a',
+                                    attrs={'class':
+                                           'a-link-normal s-underline-text'
+                                           's-underline-link-text s-link-style'
+                                           'a-text-normal'}).get('href')
             rslt_link = 'https://www.amazon.co.uk'+rslt_href
         except AttributeError:
             rslt_href = 'N/A'
             rslt_link = 'N/A'
 
         try:
-            rslt_brand = lildiv.find('span', attrs={'class': 'a-size-base-plus a-color-base'}).text
+            rslt_brand = lildiv.find('span', attrs={'class':
+                                                    'a-size-base-plus'
+                                                    'a-color-base'}).text
         except AttributeError:
             rslt_brand = 'N/A'
 
@@ -205,16 +225,19 @@ def inside_for(page_input, pages_input):
 
     # --- iterate through sorted list of tuples
     for rslt in sorted_dict:
-        with open(f'Amazon_{search_item}_page{page_input}.txt', 'a', encoding='utf-8') as f1:
+        with open(f'Amazon_{search_item}_page{page_input}.txt',
+                  'a', encoding='utf-8') as f1:
             # --- call function to append results to file
             txt_write(rslt, f1)
         db_insert(rslt, page_input)
 
     # --- print page number and number of items
-    print(f'Page: {page_input}/{pages_input} contains {len(sorted_dict)} items')
+    print(f'Page: {page_input}/{pages_input} contains'
+          f'{len(sorted_dict)} items')
 
 
-# --- iterate through each page, pull data, and record in .txt file and database
+# --- iterate through each page, pull data, and record in .txt file
+# --- and database
 for page in range(1, pages + 1):
     inside_for(page, pages)
 
